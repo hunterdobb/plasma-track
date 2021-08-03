@@ -21,6 +21,7 @@ struct HistoryHeaderView: View {
 			VStack(alignment: .leading) {
 				HStack {
 					Text("\(donation.startTime, formatter: Self.donationDateFormat)")
+						.bold()
 					Text("(\(donation.totalTimeString))")
 				}
 
@@ -38,7 +39,6 @@ struct HistoryHeaderView: View {
 				Text("Protein: \(donation.protein)")
 			}
 		}
-		.padding([.leading, .trailing])
     }
 }
 

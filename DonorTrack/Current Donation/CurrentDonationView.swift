@@ -7,130 +7,189 @@
 
 import SwiftUI
 
+enum Field {
+	case proteinField
+	case cycleField
+}
+
 struct CurrentDonationView: View {
 	static let tag: String? = "Current"
 	@Binding var donations: [Donation]
 
-	@State private var currentDonation = Donation(protein: "N/A", cycles: [])
+	@State private var currentDonation = Donation(protein: "", cycles: [])
 	@State private var newDonationsData = Donation.Data()
+
 	@State private var newCycleAmount = ""
 	@State private var protein = ""
+	@FocusState private var focusedField: Field?
+
+	@State private var editProtein = false
+
 	@State private var currentCycleTime = Date()
 	@State private var donationIsStarted = false
+
 	let saveAction: () -> Void
+
+	@ViewBuilder var donationHeader: some View {
+		HStack {
+			Text("Start:")
+			Text(currentDonation.startTime, style: .time)
+
+			Divider()
+
+			HStack {
+				Text("Protein:")
+
+				TextField("None", text: $currentDonation.protein)
+					.foregroundColor(.blue)
+					.keyboardType(.decimalPad)
+					.focused($focusedField, equals: .proteinField)
+			}
+			.onTapGesture { focusedField = .proteinField }
+			.foregroundColor(.blue)
+		}
+	}
+
+	@ViewBuilder var donationFooter: some View {
+		if !currentDonation.cycles.isEmpty {
+			HStack {
+				Spacer()
+
+				Text("Total:")
+				Text(currentDonation.startTime, style: .timer)
+			}
+		}
+	}
 
 	var body: some View {
 		NavigationView {
-			if donationIsStarted {
-				VStack {
-					List {
-						Section(header: CurrentDonationHeaderView(currentDonation: currentDonation)) {
-							ForEach(currentDonation.cycles.indices, id: \.self) { i in
-								let cycle = currentDonation.cycles[i]
-								let cycleCount = i + 1
+			Group {
+				if donationIsStarted {
+					VStack {
+						List {
+							Section(
+								header: donationHeader,
+								footer: donationFooter
+							) {
+								ForEach(currentDonation.cycles.indices, id: \.self) { i in
+									let cycle = currentDonation.cycles[i]
+									let cycleCount = i + 1
+									HStack {
+										Text("\(cycleCount)")
+											.font(.caption)
+
+										Text("\(cycle.totalAmount)")
+											.font(.title2)
+											.bold()
+
+										Text("\(currentDonation.getCycleAmount(for: i))")
+
+										Spacer()
+
+										Text(cycle.minuteSecondsString)
+									}
+								}
+								.onTapGesture {
+									focusedField = .none
+								}
+
 								HStack {
-									Text("\(cycleCount)")
+									Text("\(currentDonation.cycles.count + 1)")
 										.font(.caption)
 
-									Text("\(cycle.totalAmount)")
+									TextField("Total mL After Cycle", text: $newCycleAmount)
+										.focused($focusedField, equals: .cycleField)
+										.keyboardType(.numberPad)
 										.font(.title2)
-										.bold()
-
-									Text("\(currentDonation.getCycleAmount(for: i))")
 
 									Spacer()
 
-									Text(cycle.minuteSecondsString)
+									Text(currentCycleTime, style: .timer)
+										.multilineTextAlignment(.center)
+								}
+								.onTapGesture {
+									focusedField = .cycleField
+									print("Tapped")
 								}
 							}
-							.onTapGesture {
-								hideKeyboard()
+						}
+						.navigationTitle(Text("Donating Now"))
+						.listStyle(InsetGroupedListStyle())
+//						.onTapGesture {
+//							focusedField = .none
+//						}
+						.navigationBarItems(trailing: Button("Finish") {
+							donationIsStarted = false
+							protein = ""
+							currentDonation.finishTime = Date()
+							donations.insert(currentDonation, at: 0)
+							saveAction()
+							newDonationsData = Donation.Data()
+						})
+
+						Button {
+							withAnimation {
+								addCycle(amount: newCycleAmount, lengthInSeconds: Int(Date().timeIntervalSince(currentCycleTime)))
+								newCycleAmount = ""
+								focusedField = .cycleField
 							}
-
-							HStack {
-								Text("\(currentDonation.cycles.count + 1)")
-									.font(.caption)
-
-								TextField("Total After Cycle", text: $newCycleAmount)
-									.keyboardType(.numberPad)
-									.font(.title2)
-
-
-								Spacer()
-
-								Text(currentCycleTime, style: .timer)
-									.multilineTextAlignment(.center)
-
-							}
+						} label: {
+							Text("Add Cycle")
+								.bold()
+								.font(.largeTitle)
+								.frame(maxWidth: .infinity, minHeight: 60)
+						}
+						.foregroundColor(.white)
+						.background(Color.blue)
+						.cornerRadius(10)
+						.padding([.leading, .trailing, .bottom], 6)
+						.opacity(newCycleAmount.isEmpty ? 0.4 : 1.0)
+						.disabled(newCycleAmount.isEmpty)
+						.onAppear {
+							focusedField = .cycleField
 						}
 					}
-					.navigationTitle(Text("Donating Now"))
-					.listStyle(InsetGroupedListStyle())
+				} else {
+					VStack {
+						Spacer()
+
+						Text("Enter your protein below to get started")
+							.bold()
+
+						Spacer()
+
+						TextField("Protein", text: $protein)
+							.padding()
+							.focused($focusedField, equals: .cycleField)
+							.textFieldStyle(RoundedBorderTextFieldStyle())
+							.keyboardType(.decimalPad)
+
+						Button {
+							withAnimation {
+								donationIsStarted = true
+								currentCycleTime = Date()
+								currentDonation.startTime = Date()
+								currentDonation.protein = protein
+								focusedField = .cycleField
+							}
+						} label: {
+							Text("Start New Donation")
+								.bold()
+								.font(.largeTitle)
+								.frame(maxWidth: .infinity, minHeight: 65)
+						}
+						.foregroundColor(.white)
+						.background(Color.blue)
+						.cornerRadius(10)
+						.padding([.leading, .trailing, .bottom], 6)
+						.opacity(protein.isEmpty ? 0.4 : 1.0)
+						.disabled(protein.isEmpty)
+					}
+					.navigationTitle(Text("Donate Now"))
 					.onTapGesture {
-						hideKeyboard()
+						focusedField = .none
 					}
-					.navigationBarItems(trailing: Button("Finish") {
-						donationIsStarted = false
-						protein = ""
-						currentDonation.finishTime = Date()
-						donations.insert(currentDonation, at: 0)
-						saveAction()
-						newDonationsData = Donation.Data()
-					})
-
-					Button {
-						withAnimation {
-							addCycle(amount: newCycleAmount, lengthInSeconds: Int(Date().timeIntervalSince(currentCycleTime)))
-							newCycleAmount = ""
-						}
-					} label: {
-						Text("Add Cycle")
-							.bold()
-							.font(.largeTitle)
-							.frame(maxWidth: .infinity, minHeight: 65)
-					}
-					.foregroundColor(.white)
-					.background(Color.blue)
-					.cornerRadius(10)
-					.padding(.bottom)
-					.padding([.leading, .trailing], 6)
-					.opacity(newCycleAmount.isEmpty ? 0.4 : 1.0)
-					.disabled(newCycleAmount.isEmpty)
 				}
-			} else {
-				VStack {
-					Spacer()
-
-					TextField("Protein", text: $protein)
-						.padding()
-						.textFieldStyle(RoundedBorderTextFieldStyle())
-						.keyboardType(.decimalPad)
-						.onTapGesture {
-							hideKeyboard()
-						}
-
-					Button {
-						withAnimation {
-							donationIsStarted = true
-							currentCycleTime = Date()
-							currentDonation.startTime = Date()
-							currentDonation.protein = protein
-						}
-					} label: {
-						Text("Start New Donation")
-							.bold()
-							.font(.largeTitle)
-							.frame(maxWidth: .infinity, minHeight: 65)
-					}
-					.foregroundColor(.white)
-					.background(Color.blue)
-					.cornerRadius(10)
-					.padding([.leading, .trailing, .bottom], 6)
-					.opacity(protein.isEmpty ? 0.4 : 1.0)
-					.disabled(protein.isEmpty)
-				}
-				.navigationTitle(Text("Donate Now"))
-
 			}
 		}
 	}

@@ -11,27 +11,32 @@ struct CycleListView: View {
 	let donation: Donation
 
     var body: some View {
-		ForEach(donation.cycles.indices) { i in
-			let cycle = donation.cycles[i]
-			let cycleCount = i + 1
+		List {
+			ForEach(donation.cycles.indices) { i in
+				let cycle = donation.cycles[i]
+				let cycleCount = i + 1
 
-			HStack {
-				Text("\(cycleCount)")
-					.font(.caption)
+				HStack {
+					Text("\(cycleCount)")
+						.font(.caption)
 
-				Text("\(cycle.totalAmount)")
-					.font(.title2)
-					.bold()
-					.frame(minWidth: 50)
+					Text("\(cycle.totalAmount)")
+						.font(.title2)
+						.bold()
+						.frame(minWidth: 50)
 
-				Text("\(donation.getCycleAmount(for: i))")
-					.frame(minWidth: 50)
+					Text("\(donation.getCycleAmount(for: i))")
+						.frame(minWidth: 50)
 
-				Spacer()
+					Spacer()
 
-				Text(cycle.minuteSecondsString)
+					Text(cycle.minuteSecondsString)
+				}
 			}
 		}
+		.listStyle(.insetGrouped)
+		.navigationTitle(Text(donation.startTime, style: .date))
+		.navigationBarTitleDisplayMode(.inline)
     }
 }
 

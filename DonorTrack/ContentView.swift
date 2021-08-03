@@ -27,8 +27,8 @@ struct ContentView: View {
 			HistoryView(donations: $donations)
 				.tag(HistoryView.tag)
 				.tabItem {
-					Image(systemName: "tray.circle.fill")
-					Text("History")
+					Image(systemName: "calendar.circle.fill")
+					Text("My Donations")
 				}
 		}
 	}
